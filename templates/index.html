@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle do NAO Robot</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        h2{
+            text-align: center;
+        }
+
+        .grid-botoes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        button {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 15px 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-transform: capitalize;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .emergencia{
+            background-color: #eb192e;
+            border: 2px solid #fff;
+            color: #fff;
+        }
+        .pose{
+            background-color: #1eb943;
+            border: 2px solid #fff;
+            color: #fff;
+        }
+
+        #status {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .sucesso { background-color: #d4edda; color: #155724; display: block !important; }
+        .erro { background-color: #f8d7da; color: #721c24; display: block !important; }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        .bt{
+            display: flex;
+            justify-content: center; /* Centraliza horizontalmente */
+            margin: 0 auto;
+            text-align: center;
+        }
+        .conexao{
+            border: 2px solid #555;
+            border-radius: 10px;
+            padding: 3%;
+            margin: 5%;
+        }
+        input{
+            border-radius: 5px;
+            border: 1px solid rgb(65, 65, 224);
+            padding: 5%;
+            margin-top: 2%;
+            margin-bottom: 2%;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <h1>Controle Remoto NAO</h1>
+
+    <div class="conexao">
+        <h2>Conexão:</h2>
+        <form>
+        <label for="myIp">Endereço IP:</label><br>
+        <input type="text" id="myIp" name="myIp" value="{{robot_ip}}"><br>
+        <label for="myPort">Porta:</label><br>
+        <input type="text" id="myPort" name="myPort" value="{{port}}"><br><br>
+        <button class="bt" onclick="myFunction()">Enviar</button>
+        <p id="view_ip"></p>
+        <p id="view_port"></p>
+        </form> 
+    </div>
+    
+    <h2>Reacões do NAO</h2>
+    <div class="grid-botoes">
+        {% for nome in acoes %}
+            <button onclick="enviarComando('{{ nome }}')">
+                {{ nome }}
+            </button>
+        {% endfor %}
+    </div><br>
+
+    <div class="grid-botoes">
+        <button class="emergencia" onclick="emergencia()">Emergência</button>
+        <button class="pose" onclick="poseRest()">Descansar</button>
+        <button class="pose" onclick="poseInit()">Posição inicial</button>
+    </div>
+
+    <h2>Funções do NAO</h2><br>
+    <div class="grid-botoes">
+        <button onclick="pagJoystick()">Joystick</button>
+        <button onclick="pagFalar()">Falar</button>
+        <button onclick="recFacial()">Reconhecimento facial</button>
+    </div>
+    
+    <div id="status"></div>
+
+    <script>
+        function enviarComando(nomeAcao) {
+            const statusDiv = document.getElementById('status');
+            
+            // Feedback visual de carregamento
+            statusDiv.className = '';
+            statusDiv.innerHTML = '<div class="loader"></div> Enviando: ' + nomeAcao + '...';
+            statusDiv.style.display = 'block';
+
+            // Chamada para a API do Flask
+            fetch('/' + nomeAcao)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "sucesso") {
+                        statusDiv.className = 'sucesso';
+                        statusDiv.innerHTML = "✅ Sucesso: O NAO executou '" + data.acao + "'";
+                    } else {
+                        statusDiv.className = 'erro';
+                        statusDiv.innerHTML = "❌ Erro: " + data.mensagem;
+                    }
+                    
+                    // Esconde a mensagem após 3 segundos
+                    setTimeout(() => { statusDiv.style.display = 'none'; }, 3000);
+                })
+                .catch(error => {
+                    statusDiv.className = 'erro';
+                    statusDiv.innerHTML = "❌ Falha de comunicação com o servidor.";
+                    console.error('Erro:', error);
+                });
+        }
+
+        function myFunction() {
+             // 1. Pega os valores digitados pelo usuário
+            var ip = document.getElementById("myIp").value;
+            var port = document.getElementById("myPort").value;
+
+            // 2. Atualiza o texto na tela para o usuário ver
+            document.getElementById("view_ip").innerHTML = ip;
+            document.getElementById("view_port").innerHTML = port;
+
+            // 3. Envia para o Python
+            fetch('/conectar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                ip: ip,   // Envia a variável 'ip' definida acima
+                port: port // Envia a variável 'port' definida acima
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+            console.log("Resposta do servidor:", data);
+            alert("Status: " + data.mensagem);
+            })
+            .catch(error => {
+            console.error("Erro ao conectar:", error);
+            });
+        }
+        function poseRest(){
+            fetch('/pose_seguranca', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({pose: 1})
+            })
+        }
+        function poseInit(){
+            fetch('/pose_seguranca', {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({pose: 2})
+            })
+        }
+        function emergencia(){
+            fetch('/emergencia')
+        }
+        function pagJoystick(){
+            window.location.href='/joystick_page';
+        }
+        function pagFalar(){
+            window.location.href='/falar_page';
+        }
+        function recFacial(){
+            window.location.href='/reconhecer_page';
+        }
+    </script>
+
+</body>
+</html>

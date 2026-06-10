@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="NAO Control">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}"> 
+
+    <title>Painel de Controle NAO</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; }
+        .container { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 50px; }
+        h1 { color: #1a73e8; }
+        button { 
+            background: #1a73e8; color: white; border: none; padding: 15px 30px; 
+            font-size: 18px; border-radius: 8px; cursor: pointer; transition: 0.3s; 
+        }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #ccc; }
+        #status { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Controle do Robô NAO</h1>
+        <p>Clique no botão abaixo para executar o comando.</p>
+        
+        <button id="btnAcenar" onclick="enviarComando()">Acenar Agora</button>
+
+        <div id="status">Status: Aguardando...</div>
+    </div>
+
+    <div id="zone_joystick" style="position: relative; width: 200px; height: 200px;"></div>
+
+    <script>
+        function enviarComando() {
+            const btn = document.getElementById('btnAcenar');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            status.innerText = "Status: Enviando comando...";
+            status.style.color = "orange";
+
+            // Chama a rota da sua API Flask
+            fetch('/acenar')
+                .then(response => response.json())
+                .then(data => {
+                    status.innerText = "Status: " + data.mensagem;
+                    status.style.color = "green";
+                })
+                .catch(error => {
+                    status.innerText = "Status: Erro na conexão";
+                    status.style.color = "red";
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                });
+        }
+    </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.7.3/nipplejs.js"></script>
+<script>
+    var manager = nipplejs.create({
+        zone: document.getElementById('zone_joystick'),
+        mode: 'static',
+        position: {left: '50%', top: '50%'},
+        color: 'blue'
+    });
+
+    manager.on('move', function (evt, data) {
+        if (data.instance) {
+            // Pega o ângulo e a distância (força) do movimento
+            let x = Math.cos(data.angle.radian) * (data.distance / 50);
+            let y = Math.sin(data.angle.radian) * (data.distance / 50);
+
+            // Envia para o Flask via Fetch API
+            fetch(`/move?x=${x}&y=${y}`);
+        }
+    });
+
+    manager.on('end', function () {
+        // Para o robô quando soltar o dedo
+        fetch('/move?x=0&y=0');
+    });
+</script>
+</body>
+</html>

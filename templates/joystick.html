@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle do NAO Robot</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2{
+            text-align: center;
+        }
+        .joystick-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 50px;
+            height: 300px;
+        }
+
+        /* Áreas onde os joysticks vão aparecer */
+        .zone {
+            width: 200px;
+            height: 200px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .label {
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 10px;
+        }
+
+        #telemetria {
+            font-family: monospace;
+            background: #333;
+            color: #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            width: 250px;
+        }
+        button {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 15px 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-transform: capitalize;
+        }
+        button:active {
+            transform: scale(0.95);
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .grid-botoes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+        #status_msg{
+            text-align: center;
+        }
+        .video{
+            border-radius: 5px;
+            margin: auto;
+            display: flex;
+            justify-content: center; /* Centraliza horizontalmente */
+        }
+        img{
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Controle Remoto NAO</h1>
+    <!--
+    <div>
+        <img src="http://10.11.11.125:5001/video" alt="Streaming de vídeo">
+    </div>
+    -->
+
+    <div class="video">
+        <img id="placeholder-nao" src="/static/robo_nao.jpg" alt="NAO Offline">
+    
+        <img id="video-stream" src="" alt="Streaming" style="display: none;">
+    </div>
+
+    <div class="joystick-container">
+        <div>
+            <div id="joyMove" class="zone"></div>
+            <div class="label">ANDAR (X, Y)</div>
+        </div>
+        <div>
+            <div id="joyRotate" class="zone"></div>
+            <div class="label">GIRAR (Theta)</div>
+        </div>
+    </div>
+
+    <div id="telemetria">
+        COMANDOS ATUAIS: <br>
+        X: <span id="valX">0.00</span> <br>
+        Y: <span id="valY">0.00</span> <br>
+        Theta: <span id="valTheta">0.00</span>
+    </div>
+
+    <div>
+        <h2>Câmera NAO</h2>
+        <div class="grid-botoes">
+        <button onclick="on_camera()">Ativar</button>
+        <button onclick="off_camera()">Desativar</button>
+        </div>
+        <p id="status_msg"><b></b></p>
+    </div>
+
+    <div id="status"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
+    
+    <script>
+        // Variáveis de estado
+        let moveX = 0, moveY = 0, moveTheta = 0, y_angle = 0;
+
+        // 1. Joystick de Movimento (Esquerdo)
+        var joyMove = nipplejs.create({
+            zone: document.getElementById('joyMove'),
+            mode: 'static',
+            position: {left: '50%', top: '50%'},
+            color: 'blue'
+        });
+
+        // 2. Joystick de Rotação (Direito)
+        var joyRotate = nipplejs.create({
+            zone: document.getElementById('joyRotate'),
+            mode: 'static',
+            position: {left: '50%', top: '50%'},
+            color: 'red'
+        });
+
+        // Função para enviar dados ao Python
+        function sendCommand() {
+            fetch('/move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    x: moveX,
+                    y: moveY,
+                    theta: moveTheta,
+                    y_rot: y_angle
+                })
+            });
+            
+            // Atualiza tela
+            document.getElementById('valX').innerText = moveX.toFixed(2);
+            document.getElementById('valY').innerText = moveY.toFixed(2);
+            document.getElementById('valTheta').innerText = moveTheta.toFixed(2);
+        }
+
+        // Eventos do Joystick de Movimento
+        joyMove.on('move', function (evt, data) {
+            moveX = data.vector.y * 0.8;  // Frente/Trás
+            moveY = -data.vector.x * 0.8; // Esquerda/Direita
+            sendCommand();
+        });
+
+        joyMove.on('end', function () {
+            moveX = 0; moveY = 0;
+            sendCommand();
+        });
+
+        // Eventos do Joystick de Rotação
+        joyRotate.on('move', function (evt, data) {
+            // Usamos apenas o eixo X do joystick direito para girar
+            moveTheta = data.angle.radian;
+            y_angle = -data.vector.x; // Esquerda/Direita
+
+            sendCommand();
+        });
+
+        joyRotate.on('end', function () {
+            moveTheta = 0;
+            sendCommand();
+        });
+
+        function on_camera() {
+            fetch('/camera', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status_camera: 1 })
+            })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('status_msg').innerText = "Câmera: Ativa";
+            document.getElementById('status_msg').style.color = "green";
+            atualizarInterfaceCamera(1.0);
+        });
+    }
+
+    function off_camera() {
+        fetch('/camera', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status_camera: 0 })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('status_msg').innerText = "Câmera: Desativada";
+            document.getElementById('status_msg').style.color = "red";
+            atualizarInterfaceCamera(0.0);
+        });
+    }
+    function atualizarInterfaceCamera(status) {
+        const placeholder = document.getElementById('placeholder-nao');
+        const stream = document.getElementById('video-stream');
+
+        if (status === 1.0) {
+            // Liga o vídeo: mostra o stream e define o SRC para iniciar a conexão
+            placeholder.style.display = 'none';
+            stream.style.display = 'block';
+            stream.src = "http://10.11.11.125:5001/video"; 
+        } else {
+            // Desliga o vídeo: mostra a foto estática e corta a conexão do stream
+            placeholder.style.display = 'block';
+            stream.style.display = 'none';
+            stream.src = ""; // Isso força o encerramento da conexão no navegador
+        }
+    }
+    </script>
+</body>
+</html>
