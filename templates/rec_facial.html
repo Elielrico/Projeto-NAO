@@ -1,20 +1,34 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <meta charset="UTF-8">
+    <title>Visão do Robô NAO</title>
     <style>
-
+        body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; padding: 20px; }
+        .video-container { margin-bottom: 20px; }
+        img { border: 4px solid #333; border-radius: 8px; max-width: 100%; height: auto; }
+        #expressao { font-size: 24px; font-weight: bold; color: #1a73e8; margin-top: 15px; }
     </style>
-    <title>Reconhecimento facial</title>
-    </head>
-    <body>
-        <h1>Reconhecimento facial</h1>
-        <button id="learnFace">Reconhecer</button>
-    </body>
+</head>
+<body>
+
+    <h1>Monitoramento em Tempo Real</h1>
+
+    <div id="expressao">Carregando expressões...</div>
+
     <script>
-        function leranFace(){
-            fetch('/learnface')
-        }
+        // Conecta na rota de texto em tempo real que criamos no Flask
+        const evtSource = new EventSource("http://localhost:5001/status");
+
+        // Atualiza o texto da div automaticamente sempre que o Python calcular a emoção
+        evtSource.onmessage = function(event) {
+            document.getElementById("expressao").innerHTML = event.data;
+        };
+
+        evtSource.onerror = function() {
+            document.getElementById("expressao").innerHTML = "Erro ao conectar com o detector de expressões.";
+        };
     </script>
 
-
+</body>
 </html>

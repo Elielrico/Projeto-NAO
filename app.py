@@ -91,7 +91,6 @@ def carregar_movimentos():
     print("-----------------------------\n")
 
 # --- ROTAS FLASK ---
-
 @app.route('/')
 def home():
     global ROBOT_IP, PORT
@@ -253,7 +252,6 @@ def stream_nao_frames():
     client = videoProxy.subscribe("python_client", resolution, colorSpace, 5)
     
     try:
-        # Enquanto o status for verdadeiro (você pode controlar isso com uma global)
         while status_cam == 1:
             naoImage = videoProxy.getImageRemote(client)
             if naoImage is None:
@@ -268,7 +266,7 @@ def stream_nao_frames():
             # Codificar imagem em base64
             img_base64 = base64.b64encode(image_data).decode('utf-8')
 
-            # Enviar para o servidor Flask (Python 3)
+            # Enviar para o servidor Flask --> Python 3
             try:
                 requests.post(url,
                     json={
