@@ -18,7 +18,7 @@
 
     <script>
         // Conecta na rota de texto em tempo real que criamos no Flask
-        const evtSource = new EventSource("http://localhost:5001/status");
+        const evtSource = new EventSource("http://127.0.0.1:5001/status");
 
         // Atualiza o texto da div automaticamente sempre que o Python calcular a emoção
         evtSource.onmessage = function(event) {
