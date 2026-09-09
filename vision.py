@@ -84,14 +84,8 @@ def status_stream():
         while True:
             if latest_frame is not None:
                 try:
-                    # Rodamos a análise direto na imagem armazenada na memória (OpenCV)
-                    analise = DeepFace.analyze(
-                        img_path = latest_frame, 
-                        actions = ['emotion'], 
-                        enforce_detection = False
-                    )
-                    emocao_encontrada = analise[0]["dominant_emotion"]
-                    status_expressao = f"Expressão detectada: {TRADUCAO_EMOCOES.get(emocao_encontrada, emocao_encontrada)}"
+                   print("oi") 
+                    
                 except Exception as e:
                     print(f"Erro no DeepFace: {e}")
                     status_expressao = "Buscando rosto..."

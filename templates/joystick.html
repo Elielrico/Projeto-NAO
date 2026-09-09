@@ -115,6 +115,10 @@
             <div class="label">ANDAR (X, Y)</div>
         </div>
         <div>
+            <div id="joyHead" class="zone"></div>
+            <div class="label">CABEÇA (X, Y)</div>
+        </div>
+        <div>
             <div id="joyRotate" class="zone"></div>
             <div class="label">GIRAR (Theta)</div>
         </div>
@@ -142,7 +146,7 @@
     
     <script>
         // Variáveis de estado
-        let moveX = 0, moveY = 0, moveTheta = 0, y_angle = 0;
+        let moveX = 0, moveY = 0, moveTheta = 0, y_angle = 0, headX = 0, headY = 0;
 
         // 1. Joystick de Movimento (Esquerdo)
         var joyMove = nipplejs.create({
@@ -160,8 +164,16 @@
             color: 'red'
         });
 
+        // 2. Joystick de Movimento da cabeça (Centro)
+        var joyHead = nipplejs.create({
+            zone: document.getElementById('joyHead'),
+            mode: 'static',
+            position: {left: '50%', top: '50%'},
+            color: 'green'
+        });
+
         // Função para enviar dados ao Python
-        function sendCommand() {
+        function sendMoveCommand() {
             fetch('/move', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -179,16 +191,28 @@
             document.getElementById('valTheta').innerText = moveTheta.toFixed(2);
         }
 
+        // Função para enviar dados ao Python
+        function sendHeadCommand() {
+            fetch('/movehead', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    xh: headX,
+                    yh: headY
+                })
+            });
+        }
+
         // Eventos do Joystick de Movimento
         joyMove.on('move', function (evt, data) {
             moveX = data.vector.y * 0.8;  // Frente/Trás
             moveY = -data.vector.x * 0.8; // Esquerda/Direita
-            sendCommand();
+            sendMoveCommand();
         });
 
         joyMove.on('end', function () {
             moveX = 0; moveY = 0;
-            sendCommand();
+            sendMoveCommand();
         });
 
         // Eventos do Joystick de Rotação
@@ -197,12 +221,23 @@
             moveTheta = data.angle.radian;
             y_angle = -data.vector.x; // Esquerda/Direita
 
-            sendCommand();
+            sendMoveCommand();
         });
 
         joyRotate.on('end', function () {
             moveTheta = 0;
-            sendCommand();
+            sendMoveCommand();
+        });
+
+        joyHead.on('move',function(evt, data) {
+            headX = -data.vector.x;  // yal
+            headY = -data.vector.y; // pitch
+            sendHeadCommand();
+        });
+
+        joyHead.on('end', function () {
+            headX = 0; headY = 0;
+            sendHeadCommand();
         });
 
         function on_camera() {
@@ -240,7 +275,7 @@
             // Liga o vídeo: mostra o stream e define o SRC para iniciar a conexão
             placeholder.style.display = 'none';
             stream.style.display = 'block';
-            stream.src = "http://10.11.11.125:5001/video"; 
+            stream.src = "http://127.0.0.1:5001/video"; 
         } else {
             // Desliga o vídeo: mostra a foto estática e corta a conexão do stream
             placeholder.style.display = 'block';

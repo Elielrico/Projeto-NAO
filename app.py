@@ -10,6 +10,8 @@ import vision_definitions
 import requests
 import base64
 import threading
+import time
+import numpy as np
 
 app = Flask(__name__)
 
@@ -212,7 +214,6 @@ def move():
                     return jsonify(status="success")        
                 except Exception as e:
                     print("Erro de execucao: {}".format(str(e)))
-                    # IMPORTANTE: Você tambem precisa retornar algo aqui em caso de erro!
                     return jsonify({
                     "status": "erro", 
                     "mensagem": "Falha ao executar movimento: " + str(e)
@@ -261,7 +262,7 @@ def stream_nao_frames():
             height = naoImage[1]
             image_data = naoImage[6]
 
-            url = "http://10.11.11.125:5001/frame"
+            url = "http://127.0.0.1:5001/frame"
 
             # Codificar imagem em base64
             img_base64 = base64.b64encode(image_data).decode('utf-8')
@@ -275,11 +276,13 @@ def stream_nao_frames():
                         "image": img_base64,
                         "status": status_cam
                     },
-                    timeout=0.1 # Timeout curto para não acumular atraso
+                    timeout=2.0 # Timeout curto para não acumular atraso
                 )
                 
             except Exception as e:
                 print("Erro ao postar frame: {}".format(e))
+            #pausa para enciar aproximadamente 14 frames por segundo
+            time.sleep(0.07)
                 
     finally:
         videoProxy.unsubscribe(client)
@@ -309,6 +312,37 @@ def falarTexto():
     except Exception as e:
         #return "Falha ao executar comando de fala! " + str(e), 500
         return jsonify({"status": "erro"}), 500
+
+@app.route('/movehead', methods=['POST'])
+def moveHead():
+    data = request.json
+    if not data:
+        return jsonify({"status": "erro", "mensagem": "JSON ausente"}), 400
+
+    y_head = float(data.get('yh', 0))
+    x_head = float(data.get('xh', 0))
+
+    # Mapeamento e conversão EXPLÍCITA para float nativo do Python
+    angulo_yaw = float(np.interp(x_head, [-1, 1], [-2.08, 2.08]))
+    angulo_pitch = float(np.interp(y_head, [-1, 1], [-0.67, 0.51]))
+
+    print("Angulo Yaw: {}, Pitch: {}".format(angulo_yaw, angulo_pitch))
+
+    try:
+        global motion_proxy
+        
+        # Ativa a rigidez apenas na cabeça (valores de 0.0 a 1.0)
+        motion_proxy.setStiffnesses("Head", 1.0)
+        
+        # Envia os ângulos convertidos
+        motion_proxy.setAngles(["HeadYaw", "HeadPitch"], [angulo_yaw, angulo_pitch], 0.2)
+        
+        return jsonify({"status": "sucesso", "yaw": angulo_yaw, "pitch": angulo_pitch}), 200
+
+    except Exception as e:
+        # Imprime o erro exato do SDK NAOqi no terminal
+        print("Erro ao mover a cabeça do NAO:", str(e))
+        return jsonify({"status": "erro", "detalhe": str(e)}), 500
 
 @app.route('/emergencia')
 def parada_emergencia():
