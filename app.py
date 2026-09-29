@@ -21,6 +21,7 @@ motion_proxy = None
 posture_proxy = None
 memory_proxy = None
 status_cam = 0
+status_deep = 0
 
 @app.route('/conectar', methods=['POST'])
 def conectar():
@@ -231,6 +232,10 @@ def move():
 def abrir_joystick():
     return render_template('joystick.html')
 
+@app.route('/interagir_page')
+def abrir_modo_inteligente():
+    return render_template('autonomo.html')
+
 @app.route('/camera', methods=['POST'])
 def start_camera():
     global status_cam
@@ -253,7 +258,7 @@ def stream_nao_frames():
     client = videoProxy.subscribe("python_client", resolution, colorSpace, 5)
     
     try:
-        while status_cam == 1:
+        while status_cam == 1 or status_deep == 1:
             naoImage = videoProxy.getImageRemote(client)
             if naoImage is None:
                 continue
@@ -323,8 +328,8 @@ def moveHead():
     x_head = float(data.get('xh', 0))
 
     # Mapeamento e conversão EXPLÍCITA para float nativo do Python
-    angulo_yaw = float(np.interp(x_head, [-1, 1], [-2.08, 2.08]))
-    angulo_pitch = float(np.interp(y_head, [-1, 1], [-0.67, 0.51]))
+    angulo_yaw = float(np.interp(x_head, [-1, 1], [-1.40, 1.40])) #[-2.08, 2.08]
+    angulo_pitch = float(np.interp(y_head, [-1, 1], [-0.37, 0.31])) #[-0.67, 0.51]
 
     print("Angulo Yaw: {}, Pitch: {}".format(angulo_yaw, angulo_pitch))
 
@@ -343,6 +348,39 @@ def moveHead():
         # Imprime o erro exato do SDK NAOqi no terminal
         print("Erro ao mover a cabeça do NAO:", str(e))
         return jsonify({"status": "erro", "detalhe": str(e)}), 500
+
+@app.route('/get_expression', methods=['POST'])
+def get_expression():
+    global status_deep
+    data = request.json
+    status_deep = int(data.get('status_deep', 0))
+
+    if not status_deep:
+        return jsonify(status="Camera parada")
+
+    threading.Thread(target=stream_nao_frames).start()
+    
+    try:
+        # Chama a rota do PC potente
+        #res = requests.get(f"{DEEPFACE_SERVER_URL}", timeout=3.0)
+        #data = res.json()
+
+        url = "http://127.0.0.1:5002/analyze_emotion"
+        # URL do Charizard onde o DeepFace esta rodando
+
+        resp = requests.post(url, json={"status_deep": status_deep}, timeout=2.0)
+        data = resp.json()
+
+        if data.get("status") == "success":
+            return jsonify({
+                "status": "sucesso",
+                "expressao": data["emotion_pt"]
+        })
+        else:
+            return jsonify({"status": "erro", "mensagem": data.get("mensagem")}), 500
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"status": "erro", "mensagem": "Falha ao conectar no servidor DeepFace: {e}"}), 500
 
 @app.route('/emergencia')
 def parada_emergencia():

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle do NAO Robot</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        h2{
+            text-align: center;
+        }
+
+        .grid-botoes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        button {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 15px 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-transform: capitalize;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        #status {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .sucesso { background-color: #d4edda; color: #155724; display: block !important; }
+        .erro { background-color: #f8d7da; color: #721c24; display: block !important; }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        .bt{
+            display: flex;
+            justify-content: center; /* Centraliza horizontalmente */
+            margin: 0 auto;
+            text-align: center;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <h1>Modo Inteligente</h1>
+    <div>
+        <h2>Iniciar detecção de expressões</h2>
+        <div class="grid-botoes">
+            <button onclick="on_deep()">Ativar</button>
+            <button onclick="off_deep()">Desativar</button>
+        </div>
+        <p id="status_msg"><b></b></p>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        function on_deep() {
+            fetch('/get_expression', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status_deep: 1 })
+            })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('status_msg').innerText = "Deteccao: Ativa";
+            document.getElementById('status_msg').style.color = "green";
+        });
+        }
+
+        function off_deep() {
+        fetch('/get_expression', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status_deep: 0 })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('status_msg').innerText = "Deteccao: Desativada";
+            document.getElementById('status_msg').style.color = "red";
+        });
+        }
+    </script>
+
+</body>
+</html>
