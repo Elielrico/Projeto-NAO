@@ -109,6 +109,14 @@
 
     <div id="status"></div>
 
+    <div>
+        <h2>Cadastro de pessoas</h2>
+        <div class="grid-botoes">
+            <button onclick="cadastro()">Cadastro</button>
+        </div>
+        <p id="mensagem" style="font-weight: bold; color: green;"></p>
+    </div>
+
     <script>
         function on_deep() {
             fetch('/get_expression', {
@@ -120,6 +128,11 @@
         .then(data => {
             document.getElementById('status_msg').innerText = "Deteccao: Ativa";
             document.getElementById('status_msg').style.color = "green";
+
+            // Leitura direta da chave emocao_pt
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "Expressão: " + data["expressao"];
+            statusDiv.className = "sucesso";
         });
         }
 
@@ -133,7 +146,16 @@
         .then(data => {
             document.getElementById('status_msg').innerText = "Deteccao: Desativada";
             document.getElementById('status_msg').style.color = "red";
+
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "";
+            statusDiv.className = "";
+            statusDiv.style.display = "none";
         });
+        }
+        function cadastro() {
+            window.location.href = "/formulario";
+            document.getElementById('mensagem').innerText = "Processo iniciado com sucesso!";
         }
     </script>
 

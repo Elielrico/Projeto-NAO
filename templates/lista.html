@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Cadastrados</title>
+</head>
+<body>
+    <h2>Pessoas Cadastradas</h2>
+    <a href="/">+ Cadastrar Novo</a>
+    <hr>
+    
+    {% for pessoa in pessoas %}
+        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px; width: 300px;">
+            <img src="{{ url_for('static', filename='uploads/' + pessoa.foto_path) }}" width="100" alt="Foto">
+            <h3>{{ pessoa.primeiro_nome }} {{ pessoa.ultimo_nome }}</h3>
+            <p><strong>Idade:</strong> {{ pessoa.idade }} anos</p>
+            <p><strong>Condição:</strong> {{ pessoa.condicao_atendimento }}</p>
+        </div>
+    {% else %}
+        <p>Nenhum cadastro encontrado.</p>
+    {% endfor %}
+</body>
+</html>

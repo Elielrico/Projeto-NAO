@@ -11,6 +11,11 @@
             --text-color: #333;
         }
 
+        /* Garante que o padding/borda não estoure a largura dos elementos */
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
@@ -32,7 +37,6 @@
         h2{
             text-align: center;
         }
-
         .grid-botoes {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -40,7 +44,6 @@
             width: 100%;
             max-width: 600px;
         }
-
         button {
             background-color: white;
             border: 2px solid var(--primary-color);
@@ -60,7 +63,6 @@
             background-color: var(--primary-color);
             color: white;
         }
-
         .emergencia{
             background-color: #eb192e;
             border: 2px solid #fff;
@@ -103,18 +105,44 @@
             margin: 0 auto;
             text-align: center;
         }
-        .conexao{
-            border: 2px solid #555;
-            border-radius: 10px;
-            padding: 3%;
-            margin: 5%;
+        /* Card de Conexão Ajustado */
+        .conexao {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            width: 100%;
+            max-width: 450px; /* Largura máxima para telas grandes */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        input{
-            border-radius: 5px;
-            border: 1px solid rgb(65, 65, 224);
-            padding: 5%;
-            margin-top: 2%;
-            margin-bottom: 2%;
+
+        .conexao form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .conexao label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: -6px;
+        }
+        input[type="text"] {
+            width: 100%;
+            border-radius: 8px;
+            border: 1.5px solid var(--primary-color);
+            padding: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+            text-align: center;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -124,16 +152,18 @@
     <h1>Controle Remoto NAO</h1>
 
     <div class="conexao">
-        <h2>Conexão:</h2>
-        <form>
-        <label for="myIp">Endereço IP:</label><br>
-        <input type="text" id="myIp" name="myIp" value="{{robot_ip}}"><br>
-        <label for="myPort">Porta:</label><br>
-        <input type="text" id="myPort" name="myPort" value="{{port}}"><br><br>
-        <button class="bt" onclick="myFunction()">Enviar</button>
+        <h2>Conexão</h2>
+        <form onsubmit="event.preventDefault(); myFunction();">
+            <label for="myIp">Endereço IP:</label>
+            <input type="text" id="myIp" name="myIp" value="{{robot_ip}}" placeholder="Ex: 192.168.0.100">
+            
+            <label for="myPort">Porta:</label>
+            <input type="text" id="myPort" name="myPort" value="{{port}}" placeholder="Ex: 9559">
+            
+            <button type="submit">Conectar</button>
+        </form> 
         <p id="view_ip"></p>
         <p id="view_port"></p>
-        </form> 
     </div>
     
     <h2>Reacões do NAO</h2>
@@ -155,8 +185,13 @@
     <div class="grid-botoes">
         <button onclick="pagJoystick()">Joystick</button>
         <button onclick="pagFalar()">Falar</button>
-        <button onclick="recFacial()">Reconhecimento facial</button>
+        <button onclick="recFacial()">Rec. facial</button>
         <button onclick="pagInteragir()">Interagir</button>
+    </div>
+
+    <h2>Danças do NAO</h2><br>
+    <div class="grid-botoes">
+        <button onclick="macarenaDance()">Macarena</button>
     </div>
     
     <div id="status"></div>
@@ -247,6 +282,9 @@
         }
         function pagInteragir(){
             window.location.href='/interagir_page'
+        }
+        function macarenaDance(){
+            fetch('/macarena')
         }
     </script>
 

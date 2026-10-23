@@ -1,0 +1,6 @@
+Gravar movimentos no NAO
+1) conectar
+2) Box libraries - templates - Timeline
+3) Selecione o instante no frame - segure o robô na posição desejada - clique com o botão direito do mause no instante do frame - selecione "Store Joints in Keyframe" - selecione as juntas
+4) ative a rigidez pra testar - "animation mode" - segundo icone canto superior direito
+5) Atenção - Pode ser que após gravar um movimento o NAO ative a rigidez automaticamente - para isso é só ficar desativando manualmente a cada gravação pra não danificar os motores

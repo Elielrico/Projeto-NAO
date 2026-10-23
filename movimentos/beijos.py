@@ -1,7 +1,3 @@
-
-
-
-
 def Beijos():
      names = list()
      times = list()

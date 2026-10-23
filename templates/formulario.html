@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Atendimento</title>
+
+    <!-- Chamada do CSS do Bootstrap via Flask static -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+</head>
+<body class="bg-light min-vh-100 d-flex align-items-center py-4">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                
+                <!-- Card do Formulário -->
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h4 class="mb-0 fw-bold">Cadastro de Pessoas</h4>
+                    </div>
+                    
+                    <div class="card-body p-4">
+                        <form action="/formulario" method="POST" enctype="multipart/form-data">
+                            
+                            <!-- Nome e Sobrenome lado a lado -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label for="primeiro_nome" class="form-label fw-semibold">Primeiro Nome</label>
+                                    <input type="text" class="form-control" id="primeiro_nome" name="primeiro_nome" placeholder="Ex: João" required>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label for="ultimo_nome" class="form-label fw-semibold">Último Nome</label>
+                                    <input type="text" class="form-control" id="ultimo_nome" name="ultimo_nome" placeholder="Ex: Silva" required>
+                                </div>
+                            </div>
+
+                            <!-- Idade e Condição lado a lado -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-4">
+                                    <label for="idade" class="form-label fw-semibold">Idade</label>
+                                    <input type="number" class="form-control" id="idade" name="idade" placeholder="Ex: 30" min="0" required>
+                                </div>
+                                <div class="col-sm-8">
+                                    <label for="condicao_atendimento" class="form-label fw-semibold">Condição de Atendimento</label>
+                                    <select class="form-select" id="condicao_atendimento" name="condicao_atendimento" required>
+                                        <option value="" selected disabled>Selecione...</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="terapia">Terapia</option>
+                                        <option value="sensivel">Sensivel</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-4">
+                                    <label for="observacoes" class="form-label fw-semibold">Observações</label>
+                                    <input type="text" class="form-control" id="observacoes" name="observacoes">
+                                </div>
+                            </div>
+
+                            <!-- Upload de Foto -->
+                            <div class="mb-4">
+                                <label for="foto" class="form-label fw-semibold">Foto de Perfil</label>
+                                <input class="form-control" type="file" id="foto" name="foto" accept="image/*" required>
+                                <div class="form-text">Selecione uma foto no formato PNG, JPG ou JPEG.</div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Botoes de Ação -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/" class="btn btn-outline-secondary px-4 me-md-2">Cancelar</a>
+                                <button type="submit" class="btn btn-primary px-4 fw-bold">Salvar Cadastro</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Chamada do JS do Bootstrap via Flask static -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

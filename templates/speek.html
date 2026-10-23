@@ -1,103 +1,175 @@
 <!DOCTYPE html>
 <html lang="pt-br">
     <head>
+        <meta charset="UTF-8">
+        <!-- Tag essencial para responsividade no celular -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Controle do NAO Robot</title>
         <style>
         :root {
             --primary-color: #007bff;
+            --primary-hover: #0056b3;
             --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
             --text-color: #333;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 20px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
-        h1 {
+
+        h1, h2 {
             color: var(--primary-color);
-            margin-bottom: 30px;
-            font-size: 1.8rem;
             text-align: center;
+            margin-top: 0;
         }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            margin: 25px 0 15px 0;
+        }
+
+        /* Container principal do formulário */
+        .say {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            text-align: center;
+            border-radius: 8px;
+            border: 1.5px solid var(--primary-color);
+            padding: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Estilo base unificado dos botões */
         button {
             background-color: white;
             border: 2px solid var(--primary-color);
             color: var(--primary-color);
-            padding: 15px 10px;
-            font-size: 1rem;
+            padding: 12px 15px;
+            font-size: 0.95rem;
             font-weight: bold;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-transform: capitalize;
-            margin: auto;
-        }
-        input{
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            border-radius: 5px;
-            border: 1px solid var(--primary-color);
-            padding: 5%;
-            margin-top: 2%;
-            margin-bottom: 2%;
+            min-height: 48px; /* Mantém altura mínima ideal para toque em celulares */
         }
 
-        button:active {
-            transform: scale(0.95);
+        button:hover {
             background-color: var(--primary-color);
             color: white;
         }
-         #status {
-            margin-top: 30px;
-            padding: 15px;
+
+        button:active {
+            transform: scale(0.97);
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: white;
+        }
+
+        /* Grid adaptável para os botões de fala */
+        .grid-botoes {
+            display: grid;
+            /* No celular cria 2 colunas; em telas maiores preenche automaticamente */
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Status e mensagens */
+        #status {
+            margin-top: 15px;
+            padding: 12px;
             border-radius: 8px;
             width: 100%;
             max-width: 500px;
             text-align: center;
-            font-weight: 500;
+            font-weight: 600;
             display: none;
         }
 
         .sucesso { background-color: #d4edda; color: #155724; display: block !important; }
         .erro { background-color: #f8d7da; color: #721c24; display: block !important; }
-        
+
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             animation: spin 1s linear infinite;
             display: inline-block;
-            vertical-align: middle;
-            margin-right: 10px;
+            margin-right: 8px;
         }
-        .say{
-            padding: 5%;
-            border: 2px solid var(--primary-color);
-            border-radius: 10px;
-        }
-        .bt{
-            display: flex;
-            justify-content: center; /* Centraliza horizontalmente */
-            margin: 0 auto;
-            text-align: center;
-        }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         </style>
     </head>
-        <body>
-            <div class="say">
-                <h1>Falar</h1>
-                <input type="text" id="textoFala" placeholder="Digite o texto para o NAO falar"><br>
-                <button class="bt" onclick="enviarFala()">Falar</button>
-            </div>
-            <div id="status"></div>
+    <body>
+        <div class="say">
+            <h1>Falar</h1>
+            <input type="text" id="textoFala" placeholder="Digite o texto para o NAO falar">
+            <button onclick="enviarFala()">Falar</button>
+        </div>
+
+        <div id="status"></div>
+
+        <h2>Falas rápidas</h2>
+        <div class="grid-botoes">
+            <button onclick="fala1()">Olá</button>
+            <button onclick="fala2()">Tudo bem?</button>
+            <button onclick="fala3()">Qual o seu nome?</button>
+            <button onclick="fala4()">Que nome bonito</button>
+            <button onclick="fala5()">Meu nome é NAO</button>
+            <button onclick="fala6()">Oi amiguinhos</button>
+            <button onclick="fala7()">Bom dia</button>
+            <button onclick="fala8()">Boa tarde</button>
+            <button onclick="fala9()">Boa noite</button>
+            <button onclick="fala10()">Tchau</button>
+            <button onclick="fala11()">Gostei de você</button>
+            <button onclick="fala12()">Que legal</button>
+        </div>
 
             <script>
                 function enviarFala(){
@@ -131,6 +203,90 @@
                     statusDiv.innerHTML = "❌ Falha de comunicação com o servidor.";
                     console.error('Erro:', error);
                 });
+                }
+                function fala1(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Oulaaa'})
+                    })
+                }
+                function fala2(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Tudo bem'})
+                    })
+                }
+                function fala3(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Qual o seu nome'})
+                    })
+                }
+                function fala4(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Que nome bonito'})
+                    })
+                }
+                function fala5(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'O meu nome eh NAO'})
+                    })
+                }
+                function fala6(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Oi amiguinhos'})
+                    })
+                }
+                function fala7(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Bom dia'})
+                    })
+                }
+                function fala8(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Boa tarde'})
+                    })
+                }
+                function fala9(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Boa noite'})
+                    })
+                }
+                function fala10(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Tchau'})
+                    })
+                }
+                function fala11(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Gostei de voce'})
+                    })
+                }
+                function fala12(){
+                    fetch('/falar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: 'Que legal'})
+                    })
                 }
             </script>
         </body>

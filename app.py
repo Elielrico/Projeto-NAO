@@ -6,6 +6,7 @@ import almath as m
 from flask import Flask, jsonify, render_template, request, Response
 from naoqi import ALProxy
 from movimentos.headMove import inicializar_e_rastrear
+from dados import init_db, dados_bp
 import vision_definitions
 import requests
 import base64
@@ -23,6 +24,12 @@ memory_proxy = None
 status_cam = 0
 status_deep = 0
 
+# Inicializa o banco de dados e as configurações contidas em dados.py
+init_db(app)
+
+# Registra o Blueprint para ativar as rotas do dados.py
+app.register_blueprint(dados_bp)
+
 @app.route('/conectar', methods=['POST'])
 def conectar():
     global ROBOT_IP, PORT, motion_proxy, posture_proxy, memory_proxy
@@ -34,7 +41,7 @@ def conectar():
     ROBOT_IP = str(data.get('ip'))
     PORT = int(data.get('port'))
 
-    inicializar_e_rastrear(ROBOT_IP, PORT)
+    #inicializar_e_rastrear(ROBOT_IP, PORT)
 
     print("Tentando conectar ao NAO em: {}:{}".format(ROBOT_IP, PORT))
 
@@ -43,6 +50,11 @@ def conectar():
         motion_proxy = ALProxy("ALMotion", ROBOT_IP, PORT)
         posture_proxy = ALProxy("ALRobotPosture", ROBOT_IP, PORT)
         memory_proxy = ALProxy("ALMemory", ROBOT_IP, PORT)
+
+         # Garante que o gerenciador de quedas de hardware esteja ligado
+        motion_proxy.setFallManagerEnabled(True)
+        print("[Seguranca] Módulo de Reacao de Queda (FallManager) ATIVADO.") 
+
         return jsonify({
             "status": "sucesso", 
             "mensagem": "Conectado com sucesso ao NAO!"
@@ -54,6 +66,70 @@ def conectar():
             "status": "erro", 
             "mensagem": "Falha ao conectar: " + str(e)
         }), 500  
+
+def configurar_e_monitorar_seguranca():
+    """
+    Thread de Seguranca:
+    1. Ativa a Reacao Fisica Imediata de Queda (Protege cabeca e braços)
+    2. Monitora o termino da queda e levanta o robo sozinho.
+    """
+    global motion_proxy, posture_proxy, memory_proxy
+    print("[SEGURANCA] Thread iniciada.")
+
+    # Espera o /conectar criar os proxies
+    while motion_proxy is None:
+        print("[SEGURANCA] Aguardando conexão com o NAO...")
+        time.sleep(1)
+
+    print("[SEGURANCA] Conexão detectada.")
+    
+    try:
+        # -------------------------------------------------------------
+        # 1. ATIVA A REACAO FISICA INSTANTANEA DE PROTECAO CONTRA IMPACTO
+        # -------------------------------------------------------------
+        # Zera a chave de memoria do robo
+        memory_proxy.insertData("robotHasFallen", 0)
+
+        while True:
+            try:
+                # -------------------------------------------------------------
+                # 2. DETECCAO DO EVENTO DE QUEDA VIA MEMORIA DO ROBO
+                # -------------------------------------------------------------
+                # robotHasFallen passa a ser 1 no momento exato em que o sensor
+                # inercial/acelerometro detecta que o robo tombou
+                has_fallen = memory_proxy.getData("robotHasFallen")
+                postura_atual = posture_proxy.getPostureFamily()
+
+                if has_fallen == 1 or postura_atual in ["LyingBack", "LyingBelly", "SitOnFeet", "Sit"]:
+                    print("\n[ALERTA DE SEGURANCA] O robo caiu ou perdeu o equilibrio!")
+                    print("[Seguranca] Postura detectada no chao: " + str(postura_atual))
+                    
+                    # Espera 2 segundos no chao para garantir que o impacto parou
+                    time.sleep(2.0)
+                    
+                    print("[Seguranca] Iniciando rotina de recuperacao para levantar...")
+                    
+                    # Reativa a rigidez dos motores que foi desligada para protecao
+                    motion_proxy.wakeUp()
+                    
+                    # Executa a sequencia nativa e segura para reerguer o robo
+                    sucesso = posture_proxy.goToPosture("StandInit", 0.8)
+                    
+                    if sucesso:
+                        print("[Seguranca] Robo levantado e estabilizado com sucesso!\n")
+                        # Reseta o evento na memoria para a proxima queda
+                        memory_proxy.insertData("robotHasFallen", 0)
+                    else:
+                        print("[ALERTA] Falha ao tentar levantar. Tentando novamente no proximo ciclo...")
+
+            except Exception as err:
+                print("[Erro na leitura dos sensores de queda]:", err)
+
+            # Polling rápido de 0.5s para resposta agil
+            time.sleep(0.5)
+
+    except Exception as e:
+        print("[Erro de Conexao no Modulo de Seguranca]:", e)
 
 # Dicionário global que armazenará as funções de movimento
 ACOES = {}
@@ -310,8 +386,8 @@ def falarTexto():
 
         motion_proxy.moveInit()
         tts = ALProxy("ALTextToSpeech", ROBOT_IP, PORT)
-        tts.setParameter("speed", 75)
-        tts.setParameter("pitchShift", 1.1)
+        tts.setParameter("speed", 85)
+        tts.setParameter("pitchShift", 1.3)
         tts.say(txt)
         return jsonify({"status": "sucesso"}), 200
     except Exception as e:
@@ -355,9 +431,19 @@ def get_expression():
     data = request.json
     status_deep = int(data.get('status_deep', 0))
 
+    print("Status deep: ")
+    print(status_deep)
+
     if not status_deep:
+        try:
+            url = "http://127.0.0.1:5002/analyze_emotion"
+            requests.post(url, json={"status_deep": 0}, timeout=1.0)
+        except requests.exceptions.RequestException as e:
+            print("Erro ao avisar desligamento ao servidor DeepFace")
+
         return jsonify(status="Camera parada")
 
+    #corrigir pra não abrir várias threads
     threading.Thread(target=stream_nao_frames).start()
     
     try:
@@ -371,16 +457,59 @@ def get_expression():
         resp = requests.post(url, json={"status_deep": status_deep}, timeout=2.0)
         data = resp.json()
 
-        if data.get("status") == "success":
+        if data.get("status") == "sucesso":
             return jsonify({
                 "status": "sucesso",
-                "expressao": data["emotion_pt"]
-        })
+                "expressao": data["emocao_pt"]
+            }), 200
         else:
             return jsonify({"status": "erro", "mensagem": data.get("mensagem")}), 500
 
     except requests.exceptions.RequestException as e:
         return jsonify({"status": "erro", "mensagem": "Falha ao conectar no servidor DeepFace: {e}"}), 500
+
+@app.route('/macarena')
+def macarenaDance():
+    global ROBOT_IP, PORT, motion_proxy
+
+    behavior = ALProxy("ALBehaviorManager",ROBOT_IP,PORT)
+
+    print("Behaviors instalados:")
+    print("----------------------")
+
+    behaviors = behavior.getInstalledBehaviors()
+
+    #for b in behaviors:
+    #    print(b)
+
+    #nome = ".lastUploadedChoregrapheBehavior/macarena"
+    #nome = "animations/Stand/Waiting/Drink_1" #tomar água
+    #nome = "animations/Stand/Emotions/Negative/Surprise_3" #reação de surpresa - NÂO USAR - ele cai
+    #nome = "animations/Stand/Waiting/DriveCar_1"
+    #nome = "secret/intro"
+    #nome = "secret/myself"
+    #nome = "animations/Sit/Emotions/Positive/Happy_4"
+    #nome = "animations/Sit/Waiting/GeoCircle_"
+    #nome = "secret/breath"
+    nome = "animations/Sit/Waiting/Binoculars_1"
+
+    if behavior.isBehaviorInstalled(nome):
+        # 1. Se já estiver rodando, para antes de reiniciar
+        if behavior.isBehaviorRunning(nome):
+            print("O behavior ja estava rodando. Parando...")
+            behavior.stopBehavior(nome)
+            time.sleep(0.5)  # Pequena pausa para garantir a parada
+
+        print("Iniciando Macarena...")
+        behavior.runBehavior(nome)
+        print("Macarena terminou!")
+
+        motion_proxy.moveInit()
+
+        return jsonify({"status": "sucesso"})
+    else:
+        print("ERRO: comportamento nao encontrado!")
+        return jsonify({"status": "erro", "mensagem": "Behavior nao encontrado"})
 
 @app.route('/emergencia')
 def parada_emergencia():
@@ -411,6 +540,10 @@ def poseSeguranca():
 
 # --- INICIALIZAÇÃO ---
 if __name__ == '__main__':
+    # Inicia a Thread de Seguranca em segundo plano junto com o Flask
+    thread_seguranca = threading.Thread(target=configurar_e_monitorar_seguranca)
+    thread_seguranca.daemon = True
+    thread_seguranca.start()
     # 1. Carrega os arquivos da pasta
     carregar_movimentos()
     # host='0.0.0.0' permite conexão externa (celular)
